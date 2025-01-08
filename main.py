@@ -45,6 +45,9 @@ async def add_manual(
 @app.get("/get_food_log")
 async def get_log():
     entries = get_food_entries()
+    # Convert datetime objects to ISO format strings
+    for entry in entries:
+        entry['timestamp'] = entry['timestamp'].isoformat()
     response = JSONResponse(content=entries)
     response.headers["Cache-Control"] = "no-cache"
     return response
