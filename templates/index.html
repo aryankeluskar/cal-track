@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calorie Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            gap: 20px;
+        }
+
+        .metric {
+            flex: 1;
+            text-align: center;
+        }
+
+        .circle-progress {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            margin: 0 auto 15px;
+        }
+
+        .circle-progress svg {
+            transform: rotate(-90deg);
+        }
+
+        .circle-progress circle {
+            fill: none;
+            stroke-width: 8;
+        }
+
+        .circle-progress .bg {
+            stroke: #eee;
+        }
+
+        .circle-progress .progress {
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.3s;
+        }
+
+        .calories .progress { stroke: url(#caloriesGradient); }
+        .carbs .progress { stroke: url(#carbsGradient); }
+        .protein .progress { stroke: url(#proteinGradient); }
+
+        .metric-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 1rem;
+            color: #333;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        }
+
+        .btn i {
+            font-size: 1.2rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-buttons .cancel {
+            background: #eee;
+        }
+
+        .modal-buttons .submit {
+            background: linear-gradient(135deg, #4ECDC4 0%, #45B7D1 100%);
+            color: white;
+        }
+
+        #history-chart {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 30px;
+            height: 300px;
+        }
+
+        .food-log {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-top: 30px;
+        }
+
+        .food-log h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .log-entries {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .log-entry .timestamp {
+            color: #666;
+            font-size: 0.9rem;
+            margin-right: 15px;
+            min-width: 140px;
+        }
+
+        .log-entry .nutrients {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .log-entry .nutrient {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .log-entry .nutrient-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .log-entry .nutrient-dot.calories {
+            background: linear-gradient(135deg, #4ECDC4 0%, #45B7D1 100%);
+        }
+
+        .log-entry .nutrient-dot.carbs {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+        }
+
+        .log-entry .nutrient-dot.protein {
+            background: linear-gradient(135deg, #45B7D1 0%, #4F9CC9 100%);
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header .date {
+            font-size: 1.2rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        .header .subtitle {
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 5px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+</head>
+<body>
+    <!-- Add SVG gradients -->
+    <svg style="width:0;height:0;position:absolute;" aria-hidden="true" focusable="false">
+        <defs>
+            <linearGradient id="caloriesGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#4ECDC4" />
+                <stop offset="100%" style="stop-color:#45B7D1" />
+            </linearGradient>
+            <linearGradient id="carbsGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#FF6B6B" />
+                <stop offset="100%" style="stop-color:#FF8E8E" />
+            </linearGradient>
+            <linearGradient id="proteinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#45B7D1" />
+                <stop offset="100%" style="stop-color:#4F9CC9" />
+            </linearGradient>
+        </defs>
+    </svg>
+
+    <div class="header">
+        <h1>Welcome Back!</h1>
+        <div class="date" id="currentDate"></div>
+        <div class="subtitle">Tracking your last 24 hours</div>
+    </div>
+
+    <div class="metrics">
+        <div class="metric carbs">
+            <div class="circle-progress">
+                <svg width="120" height="120">
+                    <circle class="bg" cx="60" cy="60" r="54" />
+                    <circle class="progress" cx="60" cy="60" r="54" 
+                            stroke-dasharray="339.292" 
+                            stroke-dashoffset="{{ 339.292 * (100 - (carbs / 160 * 100)) / 100 }}" />
+                </svg>
+                <div class="metric-value">{{ '%d'|format(carbs|int) }}g</div>
+            </div>
+            <div class="metric-label">Carbs</div>
+        </div>
+
+        <div class="metric calories">
+            <div class="circle-progress">
+                <svg width="120" height="120">
+                    <circle class="bg" cx="60" cy="60" r="54" />
+                    <circle class="progress" cx="60" cy="60" r="54" 
+                            stroke-dasharray="339.292" 
+                            stroke-dashoffset="{{ 339.292 * (100 - (calories / 1500 * 100)) / 100 }}" />
+                </svg>
+                <div class="metric-value">{{ '%d'|format(calories|int) }}</div>
+            </div>
+            <div class="metric-label">Calories</div>
+        </div>
+
+        <div class="metric protein">
+            <div class="circle-progress">
+                <svg width="120" height="120">
+                    <circle class="bg" cx="60" cy="60" r="54" />
+                    <circle class="progress" cx="60" cy="60" r="54" 
+                            stroke-dasharray="339.292" 
+                            stroke-dashoffset="{{ 339.292 * (100 - (protein / 40 * 100)) / 100 }}" />
+                </svg>
+                <div class="metric-value">{{ '%d'|format(protein|int) }}g</div>
+            </div>
+            <div class="metric-label">Protein</div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn" onclick="openCamera()">
+            <i class="fas fa-camera"></i>
+            Scan
+        </button>
+        <button class="btn" onclick="openManualModal()">
+            <i class="fas fa-plus"></i>
+            Add
+        </button>
+    </div>
+
+    <div class="food-log">
+        <h2>Food Log</h2>
+        <div class="log-entries" id="logEntries">
+            <!-- Entries will be populated dynamically -->
+        </div>
+    </div>
+
+    <div id="history-chart"></div>
+
+    <!-- Manual Entry Modal -->
+    <div id="manualModal" class="modal">
+        <div class="modal-content">
+            <h2>Add Nutrition Data</h2>
+            <form id="manualForm">
+                <div class="form-group">
+                    <label>Calories</label>
+                    <input type="number" name="calories" required>
+                </div>
+                <div class="form-group">
+                    <label>Carbs (g)</label>
+                    <input type="number" name="carbs" required>
+                </div>
+                <div class="form-group">
+                    <label>Protein (g)</label>
+                    <input type="number" name="protein" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel" onclick="closeManualModal()">Cancel</button>
+                    <button type="submit" class="submit">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div id="cameraModal" class="modal">
+        <div class="modal-content">
+            <h2>Scan Nutrition Label</h2>
+            <form id="cameraForm">
+                <input type="file" accept="image/*" capture="environment" id="cameraInput" style="display: none">
+                <button type="button" class="btn" onclick="document.getElementById('cameraInput').click()">
+                    <i class="fas fa-camera"></i>
+                    Take Photo
+                </button>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel" onclick="closeCameraModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="loading" id="loadingIndicator">
+        Processing image...
+    </div>
+
+    <script>
+        // Modal functions
+        function openManualModal() {
+            document.getElementById('manualModal').style.display = 'flex';
+        }
+
+        function closeManualModal() {
+            document.getElementById('manualModal').style.display = 'none';
+        }
+
+        function openCamera() {
+            document.getElementById('cameraModal').style.display = 'flex';
+        }
+
+        function closeCameraModal() {
+            document.getElementById('cameraModal').style.display = 'none';
+        }
+
+        // Handle manual form submission
+        document.getElementById('manualForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch('/add_manual', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+
+        // Handle camera input
+        document.getElementById('cameraInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('loadingIndicator').style.display = 'block';
+            closeCameraModal();
+
+            try {
+                const response = await fetch('/scan_nutrition', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        });
+
+        // Load and render history chart
+        async function loadHistory() {
+            try {
+                const response = await fetch('/get_history');
+                const data = await response.json();
+
+                const dates = data.map(item => item.date);
+                const calories = data.map(item => item.calories);
+
+                const ctx = document.getElementById('history-chart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [{
+                            label: 'Calories',
+                            data: calories,
+                            borderColor: '#FF6B6B',
+                            backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2,
+                            pointBackgroundColor: '#FF6B6B',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: '#333',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#666',
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    color: '#666',
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        // Load and render food log
+        async function loadFoodLog() {
+            try {
+                const response = await fetch('/get_food_log');
+                const entries = await response.json();
+                
+                const logEntriesContainer = document.getElementById('logEntries');
+                logEntriesContainer.innerHTML = entries.map(entry => `
+                    <div class="log-entry">
+                        <div class="timestamp">${moment.utc(entry.timestamp).local().format('MMM D, h:mm A')}</div>
+                        <div class="nutrients">
+                            <div class="nutrient">
+                                <div class="nutrient-dot calories"></div>
+                                <span>${entry.calories} cal</span>
+                            </div>
+                            <div class="nutrient">
+                                <div class="nutrient-dot carbs"></div>
+                                <span>${entry.carbs}g carbs</span>
+                            </div>
+                            <div class="nutrient">
+                                <div class="nutrient-dot protein"></div>
+                                <span>${entry.protein}g protein</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading food log:', error);
+            }
+        }
+
+        // Update current date
+        function updateCurrentDate() {
+            const dateElement = document.getElementById('currentDate');
+            dateElement.textContent = moment().format('dddd, MMMM D, YYYY');
+        }
+
+        // Initialize
+        updateCurrentDate();
+        loadHistory();
+        loadFoodLog();
+    </script>
+</body>
+</html> 
