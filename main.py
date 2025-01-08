@@ -2,7 +2,8 @@ from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
-from database import get_daily_totals, add_food_entry, get_food_entries
+from database import get_daily_totals, add_food_entry, get_food_entries, get_local_timezone
+from datetime import datetime, timedelta
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -37,6 +38,31 @@ async def add_manual(
 async def get_log():
     entries = get_food_entries()
     return entries
+
+@app.get("/get_history")
+async def get_history():
+    # Get entries for the last 7 days
+    entries = get_food_entries(limit=1000)  # Get more entries for aggregation
+    
+    # Group entries by date
+    daily_totals = {}
+    for entry in entries:
+        date = entry['timestamp'].strftime('%Y-%m-%d')
+        if date not in daily_totals:
+            daily_totals[date] = {'calories': 0, 'date': date}
+        daily_totals[date]['calories'] += entry['calories']
+    
+    # Get last 7 days
+    today = datetime.now(get_local_timezone()).date()
+    result = []
+    for i in range(7):
+        date = (today - timedelta(days=i)).strftime('%Y-%m-%d')
+        result.append({
+            'date': date,
+            'calories': daily_totals.get(date, {'calories': 0})['calories']
+        })
+    
+    return result
 
 if __name__ == "__main__":
     import uvicorn
