@@ -4,19 +4,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from database import get_daily_totals, add_food_entry, get_food_entries, get_local_timezone
 from datetime import datetime, timedelta
+from fastapi.middleware.gzip import GZipMiddleware
 
 app = FastAPI()
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/favicon.ico")
 async def favicon():
-    return FileResponse("static/sprinkles-calories.svg")
+    return FileResponse("static/sprinkles-calories.svg", headers={"Cache-Control": "max-age=86400"})
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     totals = get_daily_totals()
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "index.html",
         {
             "request": request,
@@ -25,6 +27,8 @@ async def index(request: Request):
             "protein": totals['protein']
         }
     )
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 @app.post("/add_manual")
 async def add_manual(
@@ -41,14 +45,15 @@ async def add_manual(
 @app.get("/get_food_log")
 async def get_log():
     entries = get_food_entries()
-    return entries
+    response = JSONResponse(content=entries)
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 @app.get("/get_history")
 async def get_history():
-    # Get entries for the last 7 days
-    entries = get_food_entries(limit=1000)  # Get more entries for aggregation
+    entries = get_food_entries(limit=1000)
     
-    # Group entries by date
+    # Do aggregation in memory since we already have the data
     daily_totals = {}
     for entry in entries:
         date = entry['timestamp'].strftime('%Y-%m-%d')
@@ -56,7 +61,6 @@ async def get_history():
             daily_totals[date] = {'calories': 0, 'date': date}
         daily_totals[date]['calories'] += entry['calories']
     
-    # Get last 7 days
     today = datetime.now(get_local_timezone()).date()
     result = []
     for i in range(7):
@@ -66,8 +70,6 @@ async def get_history():
             'calories': daily_totals.get(date, {'calories': 0})['calories']
         })
     
-    return result
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    response = JSONResponse(content=result)
+    response.headers["Cache-Control"] = "no-cache"
+    return response
