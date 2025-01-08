@@ -1,13 +1,17 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from database import get_daily_totals, add_food_entry, get_food_entries, get_local_timezone
 from datetime import datetime, timedelta
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("static/sprinkles-calories.svg")
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
