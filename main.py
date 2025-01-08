@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
-from database import get_daily_totals, add_food_entry
+from database import get_daily_totals, add_food_entry, get_food_entries
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -32,6 +32,11 @@ async def add_manual(
         return {"success": True}
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
+
+@app.get("/get_food_log")
+async def get_log():
+    entries = get_food_entries()
+    return entries
 
 if __name__ == "__main__":
     import uvicorn
