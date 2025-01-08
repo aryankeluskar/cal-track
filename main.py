@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-from database import get_daily_totals
+from fastapi.responses import HTMLResponse, JSONResponse
+from database import get_daily_totals, add_food_entry
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -20,6 +20,18 @@ async def index(request: Request):
             "protein": totals['protein']
         }
     )
+
+@app.post("/add_manual")
+async def add_manual(
+    calories: float = Form(...),
+    carbs: float = Form(...),
+    protein: float = Form(...)
+):
+    try:
+        add_food_entry(calories, carbs, protein)
+        return {"success": True}
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=400)
 
 if __name__ == "__main__":
     import uvicorn
